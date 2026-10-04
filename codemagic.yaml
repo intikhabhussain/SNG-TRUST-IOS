@@ -90,3 +90,8 @@ workflows:
     artifacts:
       - src/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+      integrations:
+      app_store_connect: SNG TRUST CODEMAGIC
+      publishing:
+      app_store_connect:
+        auth: integration
