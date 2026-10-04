@@ -17,6 +17,20 @@ workflows:
       cocoapods: default
 
     scripts:
+      - name: Fix iOS entitlements
+        script: |
+          ENTITLEMENTS="$CM_BUILD_DIR/src/SNG Trust/Entitlements/Entitlements.plist"
+
+          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.app-sandbox" "$ENTITLEMENTS" || true
+          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.device.audio-input" "$ENTITLEMENTS" || true
+          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.device.camera" "$ENTITLEMENTS" || true
+          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.files.user-selected.read-write" "$ENTITLEMENTS" || true
+          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.network.client" "$ENTITLEMENTS" || true
+          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.personal-information.location" "$ENTITLEMENTS" || true
+          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.print" "$ENTITLEMENTS" || true
+
+          echo "iOS entitlements cleaned successfully"
+
       - name: Install CocoaPods
         script: |
           cd "$CM_BUILD_DIR/src"
@@ -37,3 +51,4 @@ workflows:
     artifacts:
       - src/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
