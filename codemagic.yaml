@@ -4,13 +4,18 @@ workflows:
     max_build_duration: 120
     instance_type: mac_mini_m2
 
+    integrations:
+      app_store_connect: "SNG TRUST CODEMAGIC"
+
     environment:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.shaheednazirghulamtrust.app
+
       vars:
         XCODE_WORKSPACE: "SNG Trust.xcworkspace"
         XCODE_SCHEME: "SNG Trust"
+
       xcode: latest
       cocoapods: default
 
@@ -90,8 +95,8 @@ workflows:
     artifacts:
       - src/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-      integrations:
-      app_store_connect: SNG TRUST CODEMAGIC
-      publishing:
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
       app_store_connect:
         auth: integration
