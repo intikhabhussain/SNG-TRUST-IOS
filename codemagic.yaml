@@ -1,28 +1,39 @@
 workflows:
-  ios_build:
-    name: SNG Trust iOS Build
-    working_directory: src
+  sng_trust_app_store:
+    name: SNG Trust App Store IPA
     max_build_duration: 120
     instance_type: mac_mini_m2
 
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.shaheednazirghulamtrust.app
+
+      vars:
+        XCODE_WORKSPACE: "SNG Trust.xcworkspace"
+        XCODE_SCHEME: "SNG Trust"
+
       xcode: latest
       cocoapods: default
 
     scripts:
       - name: Install CocoaPods
-        script: pod install
-
-      - name: Build iOS app
         script: |
-          xcodebuild \
-            -workspace "SNG Trust.xcworkspace" \
-            -scheme "SNG Trust" \
-            -configuration Release \
-            -sdk iphoneos \
-            CODE_SIGNING_ALLOWED=NO \
-            build
+          cd "$CM_BUILD_DIR/src"
+          pod install
+
+      - name: Configure code signing
+        script: |
+          cd "$CM_BUILD_DIR/src"
+          xcode-project use-profiles
+
+      - name: Build App Store IPA
+        script: |
+          cd "$CM_BUILD_DIR/src"
+          xcode-project build-ipa \
+            --workspace "$CM_BUILD_DIR/src/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
 
     artifacts:
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - src/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
