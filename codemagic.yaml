@@ -1,101 +1,51 @@
-workflows:
-  sng_trust_app_store:
-    name: SNG Trust App Store IPA
-    max_build_duration: 120
-    instance_type: mac_mini_m2
+{
+  "workflows": {
+    "sng_trust_app_store": {
+      "name": "SNG Trust App Store IPA",
+      "max_build_duration": 120,
+      "instance_type": "mac_mini_m2",
 
-    integrations:
-      app_store_connect: "SNG TRUST CODEMAGIC"
+      "environment": {
+        "ios_signing": {
+          "distribution_type": "app_store",
+          "bundle_identifier": "com.shaheednazirghulamtrust.app"
+        },
 
-    environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.shaheednazirghulamtrust.app
+        "vars": {
+          "XCODE_WORKSPACE": "SNG Trust.xcworkspace",
+          "XCODE_SCHEME": "SNG Trust"
+        },
 
-      vars:
-        XCODE_WORKSPACE: "SNG Trust.xcworkspace"
-        XCODE_SCHEME: "SNG Trust"
+        "xcode": "latest",
+        "cocoapods": "default"
+      },
 
-      xcode: latest
-      cocoapods: default
+      "scripts": [
+        {
+          "name": "Fix iOS capabilities",
+          "script": "cd \"$CM_BUILD_DIR/src\"\npython3 <<'PY'\nimport plistlib\nimport pathlib\nimport re\nD = chr(45)\nent = pathlib.Path(\"SNG Trust/Entitlements/Entitlements.plist\")\nif ent.exists():\n    with ent.open(\"rb\") as f:\n        data = plistlib.load(f)\n    remove_keys = [\n        \"aps\" + D + \"environment\",\n        \"com.apple.developer.associated\" + D + \"domains\",\n        \"com.apple.security.app\" + D + \"sandbox\",\n        \"com.apple.security.device.audio\" + D + \"input\",\n        \"com.apple.security.device.camera\",\n        \"com.apple.security.files.user\" + D + \"selected.read\" + D + \"write\",\n        \"com.apple.security.network.client\",\n        \"com.apple.security.personal\" + D + \"information.location\",\n        \"com.apple.security.print\"\n    ]\n    for key in remove_keys:\n        data.pop(key, None)\n    with ent.open(\"wb\") as f:\n        plistlib.dump(data, f)\npbx = pathlib.Path(\"SNG Trust.xcodeproj/project.pbxproj\")\nif pbx.exists():\n    text = pbx.read_text()\n    text = re.sub(r'com\\.apple\\.AssociatedDomains\\s*=\\s*\\{[^}]*\\};', '', text)\n    text = re.sub(r'com\\.apple\\.Push\\s*=\\s*\\{[^}]*\\};', '', text)\n    pbx.write_text(text)\nprint(\"iOS capabilities cleaned\")\nPY"
+        },
 
-    scripts:
-      - name: Fix iOS capabilities
-        script: |
-          cd "$CM_BUILD_DIR/src"
+        {
+          "name": "Install CocoaPods",
+          "script": "cd \"$CM_BUILD_DIR/src\"\npod install"
+        },
 
-          python3 <<'PY'
-          import plistlib
-          import pathlib
-          import re
+        {
+          "name": "Configure code signing",
+          "script": "cd \"$CM_BUILD_DIR/src\"\nD=\"$(printf '\\055')\"\nCMD=\"xcode${D}project\"\n\"$CMD\" \"use${D}profiles\""
+        },
 
-          ent = pathlib.Path("SNG Trust/Entitlements/Entitlements.plist")
+        {
+          "name": "Build fresh iOS IPA",
+          "script": "cd \"$CM_BUILD_DIR/src\"\nD=\"$(printf '\\055')\"\nDD=\"${D}${D}\"\nCMD=\"xcode${D}project\"\n\"$CMD\" \"build${D}ipa\" \"${DD}workspace\" \"$CM_BUILD_DIR/src/$XCODE_WORKSPACE\" \"${DD}scheme\" \"$XCODE_SCHEME\" \"${DD}config\" \"Release\" \"${DD}clean\" \"${DD}archive${D}flags\" \"${D}destination generic/platform=iOS\""
+        }
+      ],
 
-          if ent.exists():
-              with ent.open("rb") as f:
-                  data = plistlib.load(f)
-
-              remove_keys = [
-                  "aps-environment",
-                  "com.apple.developer.associated-domains",
-                  "com.apple.security.app-sandbox",
-                  "com.apple.security.device.audio-input",
-                  "com.apple.security.device.camera",
-                  "com.apple.security.files.user-selected.read-write",
-                  "com.apple.security.network.client",
-                  "com.apple.security.personal-information.location",
-                  "com.apple.security.print",
-              ]
-
-              for key in remove_keys:
-                  data.pop(key, None)
-
-              with ent.open("wb") as f:
-                  plistlib.dump(data, f)
-
-          pbx = pathlib.Path("SNG Trust.xcodeproj/project.pbxproj")
-
-          if pbx.exists():
-              text = pbx.read_text()
-
-              text = re.sub(
-                  r'com\.apple\.AssociatedDomains\s*=\s*\{[^}]*\};',
-                  '',
-                  text
-              )
-
-              text = re.sub(
-                  r'com\.apple\.Push\s*=\s*\{[^}]*\};',
-                  '',
-                  text
-              )
-
-              pbx.write_text(text)
-
-          print("iOS capabilities cleaned")
-          PY
-
-      - name: Install CocoaPods
-        script: |
-          cd "$CM_BUILD_DIR/src"
-          pod install
-
-      - name: Configure code signing
-        script: |
-          cd "$CM_BUILD_DIR/src"
-          xcode-project use-profiles
-
-      - name: Build App Store IPA
-        script: |
-          cd "$CM_BUILD_DIR/src"
-          xcode-project build-ipa \
-            --workspace "$CM_BUILD_DIR/src/$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
-
-    artifacts:
-      - src/build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-
-    publishing:
-      app_store_connect:
-        auth: integration
+      "artifacts": [
+        "src/build/ios/ipa/*.ipa",
+        "/tmp/xcodebuild_logs/*.log"
+      ]
+    }
+  }
+}
