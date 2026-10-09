@@ -1,4 +1,3 @@
-
 workflows": {
     "sng_trust_app_store": {
       "name": "SNG Trust App Store IPA",
