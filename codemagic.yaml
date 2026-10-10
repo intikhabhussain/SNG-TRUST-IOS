@@ -19,47 +19,26 @@ workflows:
         script: |
           set -e
           cd "$CM_BUILD_DIR/src"
-          if [ -f Podfile ]; then
-            pod install
-          fi
+          pod install
 
-      - name: Set version 2.0
+      - name: Configure iOS signing
         script: |
           set -e
-          cd "$CM_BUILD_DIR/src"
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          p = Path("SNG Trust.xcodeproj/project.pbxproj")
-          s = p.read_text()
-          s = re.sub(
-              r"MARKETING_VERSION\s*=\s*[^;]+;",
-              "MARKETING_VERSION = 2.0;",
-              s
-          )
-          p.write_text(s)
-          PY
-
-      - name: Set up code signing
-        script: |
-          set -e
-          cd "$CM_BUILD_DIR/src"
           xcode-project use-profiles
 
-      - name: Validate export options
+      - name: Verify export options
         script: |
           set -e
-          plutil -lint "$HOME/export_options.plist"
+          plutil -lint /Users/builder/export_options.plist
 
       - name: Build IPA
         script: |
           set -e
-          cd "$CM_BUILD_DIR/src"
           xcode-project build-ipa \
-            --workspace "$CM_BUILD_DIR/src/$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME" \
-            --ipa-directory "$CM_BUILD_DIR/build/ios/ipa"
+            --workspace "$CM_BUILD_DIR/src/SNG Trust.xcworkspace" \
+            --scheme "SNG Trust" \
+            --export-options-plist "/Users/builder/export_options.plist"
 
     artifacts:
       - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
+      - "*.ipa"
