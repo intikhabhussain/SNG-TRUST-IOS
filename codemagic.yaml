@@ -24,21 +24,24 @@ workflows:
       - name: Configure iOS signing
         script: |
           set -e
+          cd "$CM_BUILD_DIR"
           xcode-project use-profiles
 
-      - name: Verify export options
+      - name: Verify workspace
         script: |
           set -e
-          plutil -lint /Users/builder/export_options.plist
+          test -d "$CM_BUILD_DIR/src/$XCODE_WORKSPACE"
+          xcodebuild -list \
+            -workspace "$CM_BUILD_DIR/src/$XCODE_WORKSPACE"
 
       - name: Build IPA
         script: |
           set -e
           xcode-project build-ipa \
-            --workspace "$CM_BUILD_DIR/src/SNG Trust.xcworkspace" \
-            --scheme "SNG Trust" \
-            --export-options-plist "/Users/builder/export_options.plist"
+            --workspace "$CM_BUILD_DIR/src/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
 
     artifacts:
       - build/ios/ipa/*.ipa
-      - "*.ipa"
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Logs/Build/*.xcactivitylog
