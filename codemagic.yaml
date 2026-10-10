@@ -12,45 +12,54 @@ workflows:
         XCODE_WORKSPACE: "SNG Trust.xcworkspace"
         XCODE_SCHEME: "SNG Trust"
       xcode: latest
+      cocoapods: default
 
     scripts:
-      - name: Find Xcode workspace
+      - name: Install CocoaPods
         script: |
-          find "$CM_BUILD_DIR" -name "*.xcworkspace"
-
-      - name: Set build version 2
-        script: |
+          set -e
           cd "$CM_BUILD_DIR/src"
-          agvtool new-marketing-version 2.0
-          agvtool new-version -all 2
+          if [ -f Podfile ]; then
+            pod install
+          fi
+
+      - name: Set version 2.0
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/src"
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path("SNG Trust.xcodeproj/project.pbxproj")
+          s = p.read_text()
+          s = re.sub(
+              r"MARKETING_VERSION\s*=\s*[^;]+;",
+              "MARKETING_VERSION = 2.0;",
+              s
+          )
+          p.write_text(s)
+          PY
 
       - name: Set up code signing
         script: |
+          set -e
+          cd "$CM_BUILD_DIR/src"
           xcode-project use-profiles
 
-      - name: Create export options
+      - name: Validate export options
         script: |
-          cat > /Users/builder/export_options.plist <<'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>app-store-connect</string>
-            <key>signingStyle</key>
-            <string>manual</string>
-          </dict>
-          </plist>
-          EOF
+          set -e
+          plutil -lint "$HOME/export_options.plist"
 
       - name: Build IPA
         script: |
+          set -e
+          cd "$CM_BUILD_DIR/src"
           xcode-project build-ipa \
-            --workspace "$CM_BUILD_DIR/src/SNG Trust.xcworkspace" \
-            --scheme "SNG Trust" \
-            --export-options-plist "/Users/builder/export_options.plist"
+            --workspace "$CM_BUILD_DIR/src/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --ipa-directory "$CM_BUILD_DIR/build/ios/ipa"
 
     artifacts:
       - build/ios/ipa/*.ipa
-      - "*.ipa"
-      - /tmp/xcodebuild_logs/*.log    
+      - /tmp/xcodebuild_logs/*.log
